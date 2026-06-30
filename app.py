@@ -117,6 +117,16 @@ def simulate_discount(bundle_name, current_sales, total_price, elasticity=-1.5):
 # Streamlit UI
 # -------------------------------
 
+# Sample CSV download button
+with open('sample_orders.csv', 'rb') as f:
+    st.download_button(
+        label="📥 Download Sample CSV",
+        data=f,
+        file_name='sample_orders.csv',
+        mime='text/csv'
+    )
+
+st.caption("🔒 Your file is processed in memory only — no data is stored or shared.")
 uploaded_file = st.file_uploader("Drop your orders CSV here", type=['csv'])
 
 if uploaded_file is not None:
