@@ -24,8 +24,6 @@ def load_churn_artifacts():
     return scaler, kmeans, cluster_stats
 
 scaler, kmeans, cluster_stats = load_churn_artifacts()
-
-# Segment labels from training
 segment_labels = cluster_stats['Segment'].to_dict()
 
 # -------------------------------
@@ -160,9 +158,12 @@ def segment_customers(orders_df):
 # Main UI
 # -------------------------------
 st.title("📊 AI Product Growth & Customer Analyst")
-st.markdown("Upload your store data to get AI-powered bundle recommendations and customer retention insights.")
+st.markdown("""
+Upload your store's transaction data to get **AI-powered insights** for two critical growth areas:
+- **Product Bundles & Discount Optimization** — find which products to bundle and the best discount to maximize profit.
+- **Customer Segmentation & Retention** — identify at-risk customers before they leave and get actionable retention tips.
+""")
 
-# Privacy notice
 st.caption("🔒 Your data is processed in memory only — nothing is stored or shared.")
 
 # Tabs
@@ -172,8 +173,36 @@ tab1, tab2 = st.tabs(["📦 Bundle & Discount Analyzer", "👥 Customer Segmenta
 # TAB 1: Bundle Analyzer
 # ==========================================
 with tab1:
-    st.header("Product Bundle & Discount Optimizer")
-    st.markdown("Upload your orders CSV (with `Order ID`, `Product`, and optionally `Price` columns).")
+    st.header("📦 Product Bundle & Discount Optimizer")
+    st.markdown("""
+    **How it works:**
+    1. Upload your Shopify orders CSV file.
+    2. The AI scans all customer transactions to find products frequently bought together.
+    3. For each bundle found, it simulates how different discount levels (5%–25%) impact your profit.
+    4. You get a clear, data-backed recommendation — no guesswork needed.
+    """)
+    
+    with st.expander("📋 What CSV format do I need?"):
+        st.markdown("""
+        Your CSV file should contain these columns:
+        - `Order ID` — unique identifier for each order.
+        - `Product` — product name or SKU.
+        - `Price` (optional) — unit price of the product. If included, you'll unlock the discount simulation.
+        
+        **Example:**
+        | Order ID | Product | Price |
+        |----------|---------|-------|
+        | 1001 | Coffee Arabica | 12.00 |
+        | 1001 | French Press | 25.00 |
+        | 1002 | Mug | 8.00 |
+        """)
+    
+    with st.expander("🔒 Privacy & Security"):
+        st.markdown("""
+        - Your file is processed in memory only.
+        - No data is stored, saved, or shared.
+        - The file is deleted immediately after analysis.
+        """)
     
     # Sample CSV download
     if os.path.exists('sample_orders.csv'):
@@ -184,48 +213,72 @@ with tab1:
                 file_name='sample_orders.csv',
                 mime='text/csv'
             )
+        st.caption("Don't have your own data yet? Download the sample file above to see how the tool works.")
     
-    bundle_file = st.file_uploader("Choose a CSV file", type='csv', key='bundle')
+    bundle_file = st.file_uploader("Upload your orders CSV file", type='csv', key='bundle')
     
     if bundle_file is not None:
         try:
             bundle_df = pd.read_csv(bundle_file)
-            st.write("### Data Preview:")
+            st.write("### Data Preview (first 10 rows):")
             st.dataframe(bundle_df.head(10), use_container_width=True)
+            st.caption(f"Total rows loaded: {len(bundle_df):,}")
             
             if st.button("🔍 Analyze Bundles & Discount Impact", type="primary"):
-                with st.spinner("AI is analyzing..."):
+                with st.spinner("AI is analyzing product relationships..."):
                     bundles, simulations = analyze_bundles(bundle_df)
                     if bundles:
-                        st.success(f"✅ Found {len(bundles)} strong bundle(s)!")
+                        st.success(f"✅ Found {len(bundles)} strong bundle opportunity(s)!")
                         for b in bundles:
                             with st.container():
-                                st.subheader(f"📦 {b['product_a']} + {b['product_b']}")
-                                c1, c2, c3 = st.columns(3)
-                                c1.metric("Lift", f"{b['lift']}x")
-                                c2.metric("Confidence", f"{b['confidence']:.0%}")
-                                c3.metric("Current Sales (in data)", b['bundle_count'])
+                                st.subheader(f"📦 Bundle: {b['product_a']} + {b['product_b']}")
+                                
+                                col1, col2, col3 = st.columns(3)
+                                col1.metric("Lift", f"{b['lift']}x", help="How much more likely these two are bought together vs. random chance. Above 1.2 is significant.")
+                                col2.metric("Confidence", f"{b['confidence']:.0%}", help="The probability that a customer who buys product A also buys product B.")
+                                col3.metric("Times Bought Together", b['bundle_count'], help="How many orders in your data contain both products.")
+                                
+                                st.markdown("""
+                                > 💡 **What this means:** These products have a strong relationship. Bundling them can increase your average order value.
+                                """)
                                 
                                 sim = next((s for s in simulations if s['bundle'] == f"{b['product_a']} + {b['product_b']}"), None)
                                 if sim:
                                     st.markdown("### 🧠 AI Discount Optimizer")
-                                    st.caption("⚙️ Simulation based on an assumed price elasticity (1.5). "
-                                               "Actual results may vary. We recommend testing on a small scale first.")
+                                    st.markdown("""
+                                    The simulation below estimates how different discount levels would impact your profit.
+                                    It uses a standard price elasticity assumption (every 1% price drop → 1.5% demand increase).
+                                    """)
+                                    st.caption("⚙️ Simulation based on an assumed price elasticity (1.5). Actual results may vary. We recommend testing any discount on a small scale first.")
+                                    
                                     best = sim['best_discount']
-                                    st.info(f"**Optimal Discount:** {best['discount_percent']:.0%} → "
+                                    st.info(f"**🏆 Optimal Discount:** {best['discount_percent']:.0%} → "
                                             f"Estimated {best['estimated_total_sales']} sales, "
                                             f"Extra profit impact: ${best['profit_impact']:,.2f}")
+                                    
                                     if best['discount_percent'] >= 0.20:
-                                        st.warning("A discount above 15% may reduce margins or brand perception. Test with caution.")
-                                    with st.expander("See all scenarios"):
+                                        st.warning("⚠️ A discount above 15% may reduce margins or brand perception. Test with caution.")
+                                    
+                                    with st.expander("📊 See all discount scenarios"):
+                                        st.markdown("""
+                                        This table shows the estimated impact of each discount level:
+                                        - **Estimated Total Sales:** projected number of bundle sales.
+                                        - **Revenue:** total revenue from the bundle.
+                                        - **Profit Impact:** the additional profit (or loss) compared to not offering a discount.
+                                        """)
                                         df_sim = pd.DataFrame(sim['scenarios'])
                                         df_sim['discount_percent'] = df_sim['discount_percent'].apply(lambda x: f"{x:.0%}")
                                         st.dataframe(df_sim, use_container_width=True)
                                 else:
-                                    st.caption("Add a `Price` column to unlock discount impact predictions.")
+                                    st.info("💡 Add a `Price` column to your CSV to unlock the discount impact simulation.")
                                 st.markdown("---")
                     else:
-                        st.warning("No strong bundles found. Try with more transaction data.")
+                        st.warning("No strong product bundles found in your data. This could mean:")
+                        st.markdown("""
+                        - Your customers tend to buy single products.
+                        - You need more transaction data for the AI to find patterns.
+                        - Try lowering the min_support threshold (contact us for a custom analysis).
+                        """)
         except Exception as e:
             st.error(f"Error: {e}")
 
@@ -233,17 +286,64 @@ with tab1:
 # TAB 2: Customer Segmentation
 # ==========================================
 with tab2:
-    st.header("Customer Segmentation & Retention")
-    st.markdown("Upload your orders CSV (with `Customer ID`, `Order Date`, `Order ID`, `Total Price` columns).")
-    st.caption("⚙️ This model was pre-trained on the Online Retail dataset. For best accuracy, it will be fine-tuned on your store data in future versions.")
+    st.header("👥 Customer Segmentation & Retention")
+    st.markdown("""
+    **How it works:**
+    1. Upload your order history CSV file with customer-level data.
+    2. The AI calculates **RFM scores** for each customer:
+       - **Recency:** How recently did they buy?
+       - **Frequency:** How often do they buy?
+       - **Monetary:** How much do they spend?
+    3. Customers are automatically grouped into 4 segments using machine learning.
+    4. You get a prioritized list of at-risk customers with **specific retention actions**.
+    """)
     
-    churn_file = st.file_uploader("Choose a CSV file", type='csv', key='churn')
+    with st.expander("📋 What CSV format do I need?"):
+        st.markdown("""
+        Your CSV file should contain these columns:
+        - `Customer ID` — unique identifier for each customer.
+        - `Order Date` — date of the order (YYYY-MM-DD format recommended).
+        - `Order ID` — unique identifier for each order.
+        - `Total Price` — total amount of the order.
+        
+        **Example:**
+        | Customer ID | Order Date | Order ID | Total Price |
+        |-------------|------------|----------|-------------|
+        | 12345 | 2024-01-15 | INV-001 | 25.00 |
+        | 12345 | 2024-02-20 | INV-002 | 30.00 |
+        | 67890 | 2024-03-10 | INV-003 | 15.00 |
+        """)
+    
+    with st.expander("🔒 Privacy & Security"):
+        st.markdown("""
+        - Your file is processed in memory only.
+        - No customer data is stored, saved, or shared.
+        - The file is deleted immediately after analysis.
+        """)
+    
+    with st.expander("🧠 How the AI model works"):
+        st.markdown("""
+        This tool uses a **K-Means clustering algorithm** trained on the famous Online Retail dataset.
+        It groups customers based on their purchasing behavior into these segments:
+        
+        | Segment | Description |
+        |---------|-------------|
+        | 🏆 **Champions** | Your best customers — buy recently, frequently, and spend the most. |
+        | 💎 **Loyal** | Regular customers who buy consistently. |
+        | ⚠️ **Needs Attention** | Starting to drift away — above average recency but lower frequency. |
+        | 🚨 **At Risk** | Haven't purchased in a long time — high chance of churning. |
+        
+        > ⚙️ *Note: This model was pre-trained on a general e-commerce dataset. For optimal accuracy on your store, future versions will fine-tune the model on your specific data.*
+        """)
+    
+    churn_file = st.file_uploader("Upload your orders CSV file", type='csv', key='churn')
     
     if churn_file is not None:
         try:
             churn_df = pd.read_csv(churn_file)
-            st.write("### Data Preview:")
+            st.write("### Data Preview (first 10 rows):")
             st.dataframe(churn_df.head(10), use_container_width=True)
+            st.caption(f"Total rows loaded: {len(churn_df):,}")
             
             if st.button("🔍 Analyze Customer Segments", type="primary", key='churn_btn'):
                 with st.spinner("Segmenting customers..."):
@@ -252,38 +352,72 @@ with tab2:
                         
                         # Segment summary
                         st.subheader("📊 Segment Distribution")
+                        st.markdown("Here's how your customer base breaks down into behavioral segments:")
                         seg_counts = rfm_results['Segment'].value_counts().reset_index()
                         seg_counts.columns = ['Segment', 'Customer Count']
                         st.dataframe(seg_counts, use_container_width=True)
                         
+                        st.markdown("---")
+                        
                         # At-risk customers
                         at_risk = rfm_results[rfm_results['Segment'].str.contains('At Risk', na=False)].sort_values('Recency', ascending=False)
                         st.subheader(f"🚨 At-Risk Customers ({len(at_risk)})")
+                        st.markdown("""
+                        These customers haven't purchased in a long time and are likely to churn.
+                        **Recommended action:** Send them a personalized win-back email with a compelling offer.
+                        """)
                         if len(at_risk) > 0:
                             st.dataframe(at_risk[['Recency', 'Frequency', 'Monetary', 'Recommendation']].head(20), use_container_width=True)
                         else:
-                            st.success("No at-risk customers detected!")
+                            st.success("Great news — no at-risk customers detected!")
+                        
+                        st.markdown("---")
                         
                         # Champions
                         champions = rfm_results[rfm_results['Segment'].str.contains('Champions', na=False)]
                         st.subheader(f"🏆 Champions ({len(champions)})")
+                        st.markdown("""
+                        Your top customers — they buy recently, frequently, and spend the most.
+                        **Recommended action:** Reward them with exclusive perks, early access, or a loyalty gift. They're your brand advocates.
+                        """)
                         if len(champions) > 0:
                             st.dataframe(champions[['Recency', 'Frequency', 'Monetary', 'Recommendation']].head(10), use_container_width=True)
+                        
+                        st.markdown("---")
                         
                         # Loyal
                         loyal = rfm_results[rfm_results['Segment'].str.contains('Loyal', na=False)]
                         st.subheader(f"💎 Loyal Customers ({len(loyal)})")
+                        st.markdown("""
+                        Solid, consistent buyers who trust your store.
+                        **Recommended action:** Invite them to a VIP program, ask for reviews, or upsell premium products.
+                        """)
                         if len(loyal) > 0:
                             st.dataframe(loyal[['Recency', 'Frequency', 'Monetary', 'Recommendation']].head(10), use_container_width=True)
+                        
+                        st.markdown("---")
                         
                         # Needs Attention
                         attention = rfm_results[rfm_results['Segment'].str.contains('Needs Attention', na=False)]
                         st.subheader(f"⚠️ Needs Attention ({len(attention)})")
+                        st.markdown("""
+                        These customers are starting to drift. They don't buy as often as your loyal customers.
+                        **Recommended action:** Send a friendly re-engagement offer — free shipping or a small discount can bring them back.
+                        """)
                         if len(attention) > 0:
                             st.dataframe(attention[['Recency', 'Frequency', 'Monetary', 'Recommendation']].head(10), use_container_width=True)
+                        
+                        st.markdown("---")
+                        st.success("""
+                        ✅ **Analysis complete!** Use these insights to:
+                        - Send targeted retention campaigns to at-risk customers.
+                        - Reward your Champions to keep them loyal.
+                        - Re-engage the "Needs Attention" group before they slip away.
+                        """)
                             
                     except ValueError as e:
                         st.error(f"Error: {e}")
+                        st.info("Make sure your CSV has these columns: Customer ID, Order Date, Order ID, Total Price")
         except Exception as e:
             st.error(f"Could not read CSV: {e}")
 
@@ -291,4 +425,10 @@ with tab2:
 # Footer
 # -------------------------------
 st.markdown("---")
+st.markdown("""
+### 🚀 What's Coming Next?
+- **Direct Shopify Integration** — connect your store with one click, no CSV uploads needed.
+- **Weekly Automated Reports** — get AI insights delivered to your inbox every week.
+- **Fine-Tuned Models** — the AI will learn your specific customer patterns for even better predictions.
+""")
 st.caption("Built for Shopify store owners — AI-powered insights from your transaction data.")
