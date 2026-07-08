@@ -363,7 +363,7 @@ with tab2:
                         at_risk = rfm_results[rfm_results['Segment'].str.contains('At Risk', na=False)].sort_values('Recency', ascending=False)
                         st.subheader(f"🚨 At-Risk Customers ({len(at_risk)})")
                         st.markdown("""
-                        These customers haven't purchased in a long time and are likely to churn.
+                        These customers haven't purchased in a long time and are likely to churn.\n
                         **Recommended action:** Send them a personalized win-back email with a compelling offer.
                         """)
                         if len(at_risk) > 0:
@@ -377,7 +377,7 @@ with tab2:
                         champions = rfm_results[rfm_results['Segment'].str.contains('Champions', na=False)]
                         st.subheader(f"🏆 Champions ({len(champions)})")
                         st.markdown("""
-                        Your top customers — they buy recently, frequently, and spend the most.
+                        Your top customers — they buy recently, frequently, and spend the most.\n
                         **Recommended action:** Reward them with exclusive perks, early access, or a loyalty gift. They're your brand advocates.
                         """)
                         if len(champions) > 0:
@@ -389,7 +389,7 @@ with tab2:
                         loyal = rfm_results[rfm_results['Segment'].str.contains('Loyal', na=False)]
                         st.subheader(f"💎 Loyal Customers ({len(loyal)})")
                         st.markdown("""
-                        Solid, consistent buyers who trust your store.
+                        Solid, consistent buyers who trust your store.\n
                         **Recommended action:** Invite them to a VIP program, ask for reviews, or upsell premium products.
                         """)
                         if len(loyal) > 0:
@@ -401,7 +401,7 @@ with tab2:
                         attention = rfm_results[rfm_results['Segment'].str.contains('Needs Attention', na=False)]
                         st.subheader(f"⚠️ Needs Attention ({len(attention)})")
                         st.markdown("""
-                        These customers are starting to drift. They don't buy as often as your loyal customers.
+                        These customers are starting to drift. They don't buy as often as your loyal customers.\n
                         **Recommended action:** Send a friendly re-engagement offer — free shipping or a small discount can bring them back.
                         """)
                         if len(attention) > 0:
